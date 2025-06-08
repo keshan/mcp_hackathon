@@ -6,6 +6,7 @@ from llama_index.core.agent import AgentRunner, ReActAgentWorker
 
 from src.core.llm import get_llm
 from src.core.schemas import OutputSchema
+from src.core.utils import parse_thinking_outputs
 from src.core.mcp_tools import (
     adapted_bandit_mcp_tool, # The LlamaIndex tool for Bandit
     get_all_tool_outputs,
@@ -48,13 +49,7 @@ class SecurityAgent:
         try:
             agent_response = self.agent.query(query)
                   
-            llm_json_response = self.parse_thinking_outputs(agent_response.response)
-            
-            try:
-                llm_json_response = json.loads(agent_response.response)
-            except json.JSONDecodeError:
-                llm_json_response = None
-                logger.error("SecurityAgent: Failed to parse LLM JSON response.")
+            llm_json_response = parse_thinking_outputs(agent_response.response)
             
             logger.info(f"SecurityAgent: LLM JSON response: {llm_json_response}")
 

@@ -1,12 +1,11 @@
 # src/agents/doc_agent.py
 from loguru import logger
-import json
-
 from llama_index.core.agent import AgentRunner, ReActAgentWorker
 # from llama_index.core.agent.workflow import FunctionAgent
 
 from src.core.llm import get_llm
 from src.core.schemas import OutputSchema # CodeInputSchema no longer direct input
+from src.core.utils import parse_thinking_outputs
 from src.core.mcp_tools import (
     adapted_pydocstyle_mcp_tool, # The LlamaIndex tool
     get_all_tool_outputs,
@@ -54,7 +53,7 @@ class DocAgent:
             # The DocAgent's LLM will process the query and decide to use pydocstyle_mcp_tool
             agent_response = self.agent.query(query).response
             
-            llm_json_response = self.parse_thinking_outputs(agent_response)
+            llm_json_response = parse_thinking_outputs(agent_response)
             logger.info(f"DocAgent: LLM JSON response: {llm_json_response}")
 
             # Retrieve outputs from tools called by *this* agent during *this* query

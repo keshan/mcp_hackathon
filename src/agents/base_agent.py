@@ -45,13 +45,4 @@ class BaseAgent(ABC):
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(name='{self.name}', description='{self.description}')"
-
-    def parse_thinking_outputs(self, agent_response_str: str) -> Any:
-        try:
-            if "</think>" in agent_response_str:
-                agent_response_str = agent_response_str.split("</think>")[-1].strip()
-            return json.loads(agent_response_str)
-        except json.JSONDecodeError as e:
-            logger.error(f"{self.name}: Failed to parse final aggregation JSON: {e}. Raw response: {agent_response_str}")
-            return None
         

@@ -7,6 +7,7 @@ from llama_index.core.agent import AgentRunner, ReActAgentWorker
 
 from src.core.llm import get_llm
 from src.core.schemas import CodeInputSchema, OutputSchema, OrchestratorDecision
+from src.core.utils import parse_thinking_outputs
 from src.agents.doc_agent import DocAgent
 from src.agents.security_agent import SecurityAgent
 
@@ -143,7 +144,7 @@ the final output must strictly be ONLY in following JSON format:
         final_report_str = self.orchestrator_agent.query(aggregation_prompt).response
         logger.info("Orchestrator: Aggregation complete.")
 
-        final_json_str = self.parse_thinking_outputs(final_report_str)
+        final_json_str = parse_thinking_outputs(final_report_str)
 
         final_outputs: OutputSchema = OutputSchema(
             code=code_string, # General summary, no specific code line
