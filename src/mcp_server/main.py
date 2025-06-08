@@ -2,6 +2,7 @@ import modal
 from typing import Dict, Any, Optional
 from fastapi import Body # For more detailed request body specification if needed
 from pydantic import BaseModel
+import re
 
 # Pydantic models for request and response bodies
 class ToolExecutionRequest(BaseModel):
@@ -118,10 +119,25 @@ def run_bandit_tool(params: Dict[str, Any], context: Optional[Dict[str, Any]]) -
 def run_pydocstyle_tool(params: Dict[str, Any], context: Optional[Dict[str, Any]]) -> tuple[Dict[str, Any], Dict[str, Any]]:
     """Simulates running the Pydocstyle documentation tool."""
     code_to_analyze = params.get("code", "")
-    # In a real scenario: run pydocstyle, parse output
     mock_pydocstyle_errors = []
-    if not """""" in code_to_analyze and not "'''" in code_to_analyze: # Very naive check
+
+    # Check for missing module-level docstring
+    stripped = code_to_analyze.lstrip()
+    if not (stripped.startswith('"""') or stripped.startswith("'''") ):
         mock_pydocstyle_errors.append({"code": "D100", "message": "Missing docstring in public module"})
+
+    # Check for missing function-level docstrings
+    func_pattern = re.compile(r'def (\w+)\s*\([^)]*\):\s*([^\"\']*)')
+    for match in re.finditer(r'def (\w+)\s*\([^)]*\):', code_to_analyze):
+        func_name = match.group(1)
+        # Find the line after the function definition
+        func_start = match.end()
+        after_def = code_to_analyze[func_start:].lstrip()
+        if not (after_def.startswith('"""') or after_def.startswith("'''") ):
+            mock_pydocstyle_errors.append({
+                "code": "D103",
+                "message": f"Missing docstring in function '{func_name}'"
+            })
 
     result = {"tool": "pydocstyle", "errors": mock_pydocstyle_errors, "files_checked": 1}
     return result, context if context is not None else {}
