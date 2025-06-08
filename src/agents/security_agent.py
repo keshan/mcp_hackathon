@@ -29,25 +29,28 @@ class SecurityAgent:
         logger.info(f"SecurityAgent tools: {[tool.metadata.name for tool in self.tools]}")
 
     def analyze_security(self, query: str) -> OutputSchema:
-        """
+        prompt = f"""
         Analyzes the security of the provided code snippet using its LLM agent.
         The query should contain the code and instructions for analysis. You can use the
         tools at your disposal and use that results also for your assessment. 
         The output must only be in the following JSON format. strictly adhere to this format. 
         Do not output anything other than this JSON object:
-        {
-            "issue": "Issues found in the code",
+        {{
+            "issue": "Issues found in the code as a text",
             "reason": "Reason for the issue and reasons for tagging them as issues tools used and their results",
             "fixed_code": "Fixed code",
             "feedback": "Feedback for the code"
-        }
+        }}
+
+        Here's the query:
+        {query}
         """
         logger.info(f"SecurityAgent: Received query for security analysis:\n{query}")
         
         clear_tool_outputs() 
 
         try:
-            agent_response = self.agent.query(query)
+            agent_response = self.agent.query(prompt)
                   
             llm_json_response = parse_thinking_outputs(agent_response.response)
             

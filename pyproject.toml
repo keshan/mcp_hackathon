@@ -16,6 +16,7 @@ dependencies = [
     "llama-index-program-lmformatenforcer>=0.3.0",
     "openinference-instrumentation-llama_index",
     "asyncio>=3.4.3",
+    "gradio>=5.33.0",
 ]
 
 [project.optional-dependencies]

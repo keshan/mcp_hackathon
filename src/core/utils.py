@@ -4,6 +4,7 @@ from loguru import logger
 
 def parse_thinking_outputs(agent_response_str: str) -> Any: # Ensure 'Any' is from 'typing'
         try:
+            logger.debug(f"parse_thinking_outputs: Received agent response: {agent_response_str}")
             if "</think>" in agent_response_str:
                 agent_response_str = agent_response_str.split("</think>")[-1].strip()
             return json.loads(agent_response_str)

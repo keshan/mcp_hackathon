@@ -31,17 +31,20 @@ class DocAgent:
 
 
     def analyze_documentation(self, query: str) -> OutputSchema:
-        """
+        prompt = f"""
         Analyzes the documentation of the provided code snippet using its LLM agent.
         The query should contain the code and instructions for analysis. You can use the
         tools at your disposal and use that results also for your assessment. The output must only be
         in the following JSON format. Do not output anything other than this JSON object:
-        {
+        {{
             "issue": "Issues found in the code",
             "reason": "Reason for the issue and reasons for tagging them as issues",
             "fixed_code": "Fixed code",
             "feedback": "Feedback for the code"
-        }
+        }}
+
+        Here's the query:
+        {query}
         """
         logger.info(f"DocAgent: Received query for documentation analysis:\n{query}")
         
@@ -51,7 +54,7 @@ class DocAgent:
 
         try:
             # The DocAgent's LLM will process the query and decide to use pydocstyle_mcp_tool
-            agent_response = self.agent.query(query).response
+            agent_response = self.agent.query(prompt).response
             
             llm_json_response = parse_thinking_outputs(agent_response)
             logger.info(f"DocAgent: LLM JSON response: {llm_json_response}")
@@ -68,10 +71,10 @@ class DocAgent:
             # Let's create a generic OutputCodeLine for the agent's summary
             # and then add detailed findings from tools if available.
             
-            processed_outputs: Optional[OutputSchema] = None
+            final_output_schema: Optional[OutputSchema] = None
 
             if llm_json_response:
-                processed_outputs = OutputSchema(
+                final_output_schema = OutputSchema(
                     code=query, # Or relevant snippet if identifiable
                     issue=llm_json_response.get("issue", "Unknown Issue"),
                     feedback=llm_json_response.get("feedback", "No feedback provided"),
@@ -86,7 +89,7 @@ class DocAgent:
                     pydocstyle_output = tool_call_data.get("output", {})
                     pydocstyle_errors = pydocstyle_output.get("errors", [])
                     for error in pydocstyle_errors:
-                        processed_outputs = OutputSchema(
+                        final_output_schema = OutputSchema(
                             code=query, # Could try to get from raw_input if complex
                             line_number=error.get("line", 0),
                             issue=f"Pydocstyle-{error.get('code')}",
@@ -98,12 +101,9 @@ class DocAgent:
             if not tool_outputs_data:
                 logger.info("DocAgent: No specific tool outputs captured by this agent's run.")
 
-
-            final_output_schema = OutputSchema(results=processed_outputs)
-
         except Exception as e:
             logger.exception("DocAgent: Error during documentation analysis agent execution:")
-            final_output_schema =   OutputSchema(
+            final_output_schema = OutputSchema(
                     code="", 
                     issue="DocAgent Execution Error", 
                     feedback=f"Error in DocAgent: {str(e)}",
