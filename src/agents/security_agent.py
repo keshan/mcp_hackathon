@@ -47,6 +47,8 @@ class SecurityAgent:
 
         try:
             agent_response = self.agent.query(query)
+                  
+            llm_json_response = self.parse_thinking_outputs(agent_response.response)
             
             try:
                 llm_json_response = json.loads(agent_response.response)

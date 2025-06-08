@@ -143,13 +143,7 @@ the final output must strictly be ONLY in following JSON format:
         final_report_str = self.orchestrator_agent.query(aggregation_prompt).response
         logger.info("Orchestrator: Aggregation complete.")
 
-        try:
-            if "</think>" in final_report_str:
-                final_report_str = final_report_str.split("</think>")[-1].strip()
-            final_json_str = json.loads(final_report_str)
-        except json.JSONDecodeError as e:
-            logger.error(f"Orchestrator: Failed to parse final aggregation JSON: {e}. Raw response: {final_report_str}")
-            final_json_str = None
+        final_json_str = self.parse_thinking_outputs(final_report_str)
 
         final_outputs: OutputSchema = OutputSchema(
             code=code_string, # General summary, no specific code line

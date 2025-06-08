@@ -52,20 +52,9 @@ class DocAgent:
 
         try:
             # The DocAgent's LLM will process the query and decide to use pydocstyle_mcp_tool
-            agent_response = self.agent.query(query)
+            agent_response = self.agent.query(query).response
             
-            try:
-                llm_json_response = json.loads(agent_response.response)
-            except json.JSONDecodeError as e:
-                logger.error(f"DocAgent: Failed to parse JSON response: {e}")
-                return OutputSchema(
-                    code=query,
-                    issue="DocAgent Execution Error",
-                    feedback=f"Error in DocAgent: {str(e)}",
-                    fixed_code=query,
-                    reason="Exception during agent processing."
-                )
-
+            llm_json_response = self.parse_thinking_outputs(agent_response)
             logger.info(f"DocAgent: LLM JSON response: {llm_json_response}")
 
             # Retrieve outputs from tools called by *this* agent during *this* query
