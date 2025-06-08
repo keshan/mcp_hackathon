@@ -214,6 +214,7 @@ Gradio UI → Analyser Agent → [Security Agent, Performance Agent, Documentati
   - [ ] Integrate an LLM (e.g., `AgentRunner` with ReAct agent) to dynamically select and invoke tools based on analysis requests.
   - [ ] Refine tool descriptions for better LLM understanding.
   - [X] Ensure Arize Phoenix traces show LLM calls and tool invocations. (User to verify in Phoenix UI)
+  - [x] Resolve Pydantic validation and type errors for robust end-to-end execution.
 - [ ] **Task 12**: Create code analysis depth determination algorithm
 - [ ] **Task 13**: Design agent task delegation and communication protocols
 - [ ] **Task 14**: Implement result aggregation and synthesis logic

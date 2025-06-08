@@ -15,6 +15,7 @@ dependencies = [
     "python-dotenv>=1.1.0",
     "llama-index-program-lmformatenforcer>=0.3.0",
     "openinference-instrumentation-llama_index",
+    "asyncio>=3.4.3",
 ]
 
 [project.optional-dependencies]
