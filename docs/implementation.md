@@ -194,18 +194,32 @@ Gradio UI → Analyser Agent → [Security Agent, Performance Agent, Documentati
 - [x] **Task 7**: Implement basic MCP server with health checks
 - [x] **Task 8**: Create agent context isolation and management system
 - [x] **Task 9**: Implement secure tool execution environment
-- [ ] **Task 10**: Deploy basic MCP server to Modal with monitoring
+- [x] **Task 10**: Deploy basic MCP server to Modal with monitoring
 
 ## Phase 2: Analyser Agent (Orchestrator) Implementation
 
 ### 2.1 Core Orchestrator Logic
 - [ ] **Task 11**: Implement LlamaIndex Multi-Agent Orchestrator integration
+  - [x] Create `src/orchestrator` module and add to build configuration (`pyproject.toml`).
+      - [x] Define basic `CodeAnalysisOrchestrator` class in `src/orchestrator/main.py`.
+      - [x] Create LlamaIndex `FunctionTool` wrappers for Bandit and Pydocstyle.
+      - [x] Implement `mcp_tool_wrapper` function to call the deployed MCP server's `/execute_tool` endpoint using `httpx`.
+          - [x] Add `httpx` dependency.
+          - [x] Handle MCP server payload requirements (e.g., `agent_id`).
+          - [x] Correctly parse MCP server JSON response.
+      - [x] Test end-to-end tool execution from orchestrator to MCP server.
+  - [x] Refer https://docs.llamaindex.ai/en/stable/module_guides/observability/#observability and add observability to llamaindex agents.
+  - [X] Fix any import errors, lint issues, or runtime errors encountered during integration.
+  - [X] Verify the agent dynamically calls tools via MCP server and aggregates results.
+  - [ ] Integrate an LLM (e.g., `AgentRunner` with ReAct agent) to dynamically select and invoke tools based on analysis requests.
+  - [ ] Refine tool descriptions for better LLM understanding.
+  - [X] Ensure Arize Phoenix traces show LLM calls and tool invocations. (User to verify in Phoenix UI)
 - [ ] **Task 12**: Create code analysis depth determination algorithm
 - [ ] **Task 13**: Design agent task delegation and communication protocols
 - [ ] **Task 14**: Implement result aggregation and synthesis logic
 - [ ] **Task 15**: Create analysis reasoning and explanation generation
 
-### 2.2 Code Processing Engine
+{{ ... }}
 - [ ] **Task 16**: Build Python code parser and AST analyzer
 - [ ] **Task 17**: Implement code complexity metrics calculation
 - [ ] **Task 18**: Create file structure analysis and dependency mapping

@@ -96,3 +96,78 @@
     - Calls the tool's Modal function (`.remote()`) with `tool_params` and `context`.
     - Returns the tool's result and updated context, or an error if the tool is not found or an exception occurs during execution.
 - This setup establishes a secure (via image isolation and potential secrets management) and extensible way to add and call analysis tools.
+
+**Objective:** Begin Phase 2: Analyser Agent (Orchestrator) Implementation. Task 11: Implement LlamaIndex Multi-Agent Orchestrator integration.
+
+**Key Activities & Changes:**
+
+1.  **Created Orchestrator Module (`src/orchestrator`):**
+    *   Added `src/orchestrator/__init__.py`.
+    *   Created `src/orchestrator/main.py` with a basic `CodeAnalysisOrchestrator` class.
+    *   Updated `pyproject.toml` to include `src/orchestrator` in packages for build.
+
+2.  **Implemented LlamaIndex Tool Wrappers:**
+    *   Defined LlamaIndex `FunctionTool` instances for `bandit_code_scan` and `pydocstyle_code_check` within `src/orchestrator/main.py`.
+    *   These tools utilize an `mcp_tool_wrapper` function to delegate execution.
+
+3.  **Implemented Live MCP Server Calling (`mcp_tool_wrapper`):**
+    *   Added `httpx` as a project dependency to `pyproject.toml`.
+    *   Modified `mcp_tool_wrapper` to make HTTP POST requests to the deployed Modal MCP server endpoint (`https://keshan--mcp-server-app-execute-tool.modal.run`).
+    *   Ensured the payload sent to the MCP server includes the required `agent_id` field.
+    *   Correctly handled the JSON response format from the MCP server (which returns a list: `[response_dict, status_code]`).
+    *   Added basic error handling for HTTP requests and JSON parsing.
+
+4.  **Tested Orchestrator to MCP Server Integration:**
+    *   Successfully ran `src/orchestrator/main.py`.
+    *   Verified that the orchestrator calls the live MCP server.
+    *   Confirmed that the mock tool results (Bandit finding a TODO, Pydocstyle finding missing docstrings) are correctly retrieved and processed by the orchestrator.
+
+**Issues Encountered & Resolutions:**
+
+*   **Initial file creation failure:** `write_to_file` failed to create `src/orchestrator` directory implicitly. Resolved by using `mkdir -p` command first.
+*   **HTTP 422 Error (Missing `agent_id`):** The MCP server required `agent_id` in the payload. Resolved by adding it to the `mcp_tool_wrapper`'s request payload.
+*   **TypeError (`'list' object has no attribute 'get'`):** The MCP server returns `[response_dict, status_code]`. The orchestrator was trying to call `.get()` on the list. Resolved by accessing `response_payload[0]` to get the dictionary before processing.
+
+**Next Steps:**
+
+*   Proceed with LLM integration into the `CodeAnalysisOrchestrator` using LlamaIndex agent capabilities (e.g., `AgentRunner`).
+*   Refine tool descriptions for better LLM understanding.
+*   Make server URL and agent ID configurable.
+
+## Session Ending 2025-06-08
+
+**Objective**: Integrate OpenAILike LLM with Nebius API into the multi-agent orchestrator, ensure MCP tool invocation, and fix related import/runtime errors.
+
+**Key Activities & Changes**:
+
+1.  **LLM Integration**:
+    *   Replaced `MockChatLLM` with `OpenAILike` from `llama_index.llms.openai_like` in `src/orchestrator/main.py`.
+    *   Configured `OpenAILike` to use Nebius API endpoint (`NEBIUS_API_BASE`) and API key (`NEBIUS_API_KEY`) from environment variables.
+    *   Set `is_chat_model=True` for `OpenAILike`.
+
+2.  **Dependency Management & Imports**:
+    *   Added `llama-index-llms-openai-like` package using `uv add`.
+    *   Resolved multiple `ModuleNotFoundError` and `ImportError` issues by:
+        *   Correcting the import path for `OpenAILike` to `llama_index.llms.openai_like`.
+        *   Removing `ListToolRetriever` and passing tools directly to `ReActAgentWorker.from_tools()`.
+        *   Ensuring `Dict`, `Optional` from `typing` were imported.
+        *   Importing `BaseModel as PydanticBaseModel` from `llama_index.core.tools.types` and `Field as PydanticField` from `pydantic`.
+
+3.  **Tool Invocation & Agent Setup**:
+    *   Ensured `ReActAgentWorker` is initialized correctly with the `OpenAILike` LLM and the list of async tools.
+    *   Verified that the `mcp_tool_wrapper` correctly calls the MCP server and processes responses.
+    *   The agent successfully used `bandit_tool` and `pydocstyle_tool` via the MCP server.
+
+4.  **Observability**:
+    *   Confirmed Arize Phoenix launches correctly and is configured as the LlamaIndex global handler.
+    *   The script output indicates successful LLM calls and tool interactions, which should be traceable in Phoenix.
+
+5.  **Error Resolution**:
+    *   Addressed `NameError` for `Dict`, `PydanticBaseModel`.
+    *   The script now runs without Python errors, successfully performing code analysis using the LLM and tools.
+
+6.  **Documentation**:
+    *   Updated `docs/implementation.md` to reflect completed sub-tasks for Task 11.
+
+**Outcome**: The orchestrator now successfully uses a real LLM (`OpenAILike` with Nebius) to dynamically invoke tools (Bandit, Pydocstyle) via the MCP server, with observability through Arize Phoenix. All critical import and runtime errors from the integration process have been resolved.
+

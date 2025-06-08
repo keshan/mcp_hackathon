@@ -5,9 +5,16 @@ description = "A sophisticated multi-agent code analysis system."
 requires-python = ">=3.12"
 
 dependencies = [
-    "llama-index",
     "modal",
-    "fastapi"
+    "fastapi",
+    "httpx",
+    "llama-index-callbacks-arize-phoenix",
+    "arize-phoenix",
+    "llama-index-llms-openai-like>=0.4.0",
+    "loguru>=0.7.3",
+    "python-dotenv>=1.1.0",
+    "llama-index-program-lmformatenforcer>=0.3.0",
+    "openinference-instrumentation-llama_index",
 ]
 
 [project.optional-dependencies]
@@ -25,7 +32,8 @@ python_functions = "test*"
 packages = [
     "src/agents",
     "src/core",
-    "src/mcp_server"
+    "src/mcp_server",
+    "src/orchestrator"
 ]
 
 [build-system]
