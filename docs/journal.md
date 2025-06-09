@@ -201,3 +201,21 @@
         *   Correct construction and output of the final `OutputSchema` in JSON format.
 
 **Outcome**: The multi-agent architecture is now robust against the previously encountered schema validation and type errors. The `main.py` script demonstrates a successful end-to-end analysis pipeline, with agents communicating via defined Pydantic schemas and the orchestrator correctly coordinating the workflow and synthesizing results.
+
+## Task: Create Gradio UI for MCP Tool Interaction (via Modal)
+
+- **Objective**: Develop a user-friendly Gradio interface to interact with MCP tools hosted on a Modal endpoint.
+- **Directory Created**: `mcp_deploy`
+- **Files Created in `mcp_deploy`**:
+    - `app.py`: Contains the Gradio application logic. It allows users to input a tool name and its parameters (as a JSON string), then calls the specified Modal MCP endpoint using `httpx`.
+    - `requirements.txt`: Lists dependencies: `gradio`, `httpx`, `python-dotenv`.
+    - `README.md`: Provides setup and usage instructions, including environment setup with `uv`, `.env` configuration for `MODAL_MCP_ENDPOINT`, and how to run the app.
+    - `.env.example`: Template for the `.env` file, guiding users to set their `MODAL_MCP_ENDPOINT`.
+- **Key Features**:
+    - Asynchronous HTTP calls to the Modal endpoint.
+    - JSON input for tool parameters and JSON output display for results.
+    - Error handling for invalid JSON, HTTP errors, and unconfigured Modal endpoint.
+    - Clear instructions for setup and usage in the README.
+- **Development Notes**:
+    - Ensured adherence to project guidelines (e.g., using `uv` for dependency management in README instructions).
+    - Focused on creating a standalone, easy-to-use interface for testing and interacting with the deployed MCP tools.

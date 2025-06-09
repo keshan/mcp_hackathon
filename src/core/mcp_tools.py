@@ -1,5 +1,15 @@
 # src/core/mcp_tools.py
 # MCP tool wrappers and utility functions
+import warnings
+
+# Display deprecation warning
+warnings.warn(
+    "The functions in this module are deprecated and will be removed in a future version. "
+    "Please use the direct Modal MCP server integration instead.",
+    DeprecationWarning,
+    stacklevel=2
+)
+
 
 import os
 import httpx
@@ -75,14 +85,6 @@ def mcp_tool_wrapper(tool_name: str, agent_id_param: str, **kwargs) -> Dict[str,
     except Exception as e:
         logger.exception(f"MCP Unexpected error calling tool '{tool_name}'")
         return {"error": f"Unexpected error: {str(e)}"}
-
-bandit_mcp_tool = FunctionTool.from_defaults(
-    fn=lambda code: mcp_tool_wrapper("bandit", agent_id_param=MCP_AGENT_ID, code=code),
-    name="bandit_mcp_tool",
-    description="Runs Bandit security linter on Python code to find common security issues. Input is the code string.",
-    fn_schema=ToolCodeInputSchema
-)
-adapted_bandit_mcp_tool = adapt_to_async_tool(bandit_mcp_tool)
 
 pydocstyle_mcp_tool = FunctionTool.from_defaults(
     fn=lambda code: mcp_tool_wrapper("pydocstyle", agent_id_param=MCP_AGENT_ID, code=code),

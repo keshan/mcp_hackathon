@@ -19,7 +19,7 @@ class OutputSchema(PydanticBaseModel):
     issue: str = PydanticField(..., description="Specific issue identified in the code.")
     reason: str = PydanticField(..., description="Reason for the issue.")
     fixed_code: Optional[str] = PydanticField(None, description="The suggested fixed code, if any.")
-    feedback: str = PydanticField(..., description="General feedback about the code.")
+    feedback: str = PydanticField(..., description="General feedback about the code. give this feedback text in markdown format.")
 
 class OrchestratorDecision(PydanticBaseModel):
     """Represents the decision made by the orchestrator."""

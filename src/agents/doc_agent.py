@@ -1,124 +1,150 @@
 # src/agents/doc_agent.py
 from loguru import logger
 from llama_index.core.agent import AgentRunner, ReActAgentWorker
-# from llama_index.core.agent.workflow import FunctionAgent
+from llama_index.core.tools import FunctionTool
+import json
+from gradio_client import Client
 
 from src.core.llm import get_llm
-from src.core.schemas import OutputSchema # CodeInputSchema no longer direct input
+from src.core.schemas import OutputSchema
 from src.core.utils import parse_thinking_outputs
-from src.core.mcp_tools import (
-    adapted_pydocstyle_mcp_tool, # The LlamaIndex tool
-    get_all_tool_outputs,
-    clear_tool_outputs,
-    # mcp_tool_wrapper is not directly called by DocAgent's main logic anymore,
-    # but by the adapted_pydocstyle_mcp_tool.
+
+# Gradio client function for Pydocstyle
+def run_gradio_documentation_check(code_snippet: str) -> dict:
+    """
+    Analyzes a Python code snippet for documentation style using a Gradio-based Pydocstyle MCP tool.
+
+    Args:
+        code_snippet: The Python code string to analyze.
+
+    Returns:
+        A dictionary containing the Pydocstyle analysis results.
+    """
+    logger.info(f"Running Gradio documentation check for code (first 200 chars): {code_snippet[:200]}...")
+    try:
+        # client = Client(src="Agents-MCP-Hackathon/documentation_mcp_tool", hf_token=os.getenv("HUGGING_FACE_TOKEN")) # If private
+        client = Client(src="Agents-MCP-Hackathon/documentation_mcp_tool")
+
+        parameters = {"code": code_snippet}
+        tool_parameters_json = json.dumps(parameters)
+
+        # The Gradio client's predict method returns a string which is the JSON output from the Gradio app's output component.
+        raw_json_string_output = client.predict(
+            tool_params_json=tool_parameters_json,
+            api_name="/predict"
+        )
+        logger.info(f"Gradio documentation check raw string output: {raw_json_string_output}")
+
+        if not raw_json_string_output:
+            logger.error("Gradio documentation tool returned an empty response.")
+            return {"error": "Empty response from documentation tool", "raw_output": raw_json_string_output}
+
+        # Parse the JSON string output from Gradio
+        # This string is expected to be a JSON representation of a list containing a dictionary (the MCP server response)
+        # e.g., "[{'session_id': ..., 'result': ..., 'error': ...}, 200]"
+        # However, the useful part is often the 'result' field within the first element's dictionary.
+        parsed_outer_list = json.loads(raw_json_string_output)
+        
+        if isinstance(parsed_outer_list, list) and len(parsed_outer_list) > 0 and isinstance(parsed_outer_list[0], dict):
+            mcp_response_dict = parsed_outer_list[0]
+            # We are interested in the 'result' field from the MCP tool's actual response
+            if mcp_response_dict.get("error"):
+                 logger.error(f"Documentation tool reported an error: {mcp_response_dict.get('error')}")
+                 return {"error": f"Error from documentation tool: {mcp_response_dict.get('error')}", "details": mcp_response_dict}
+            
+            actual_tool_result = mcp_response_dict.get("result")
+            if actual_tool_result:
+                logger.info(f"Extracted Pydocstyle result: {actual_tool_result}")
+                return actual_tool_result # This should be like {'tool': 'pydocstyle', 'errors': [...], ...}
+            else:
+                logger.error("Gradio documentation tool response did not contain a 'result' field in the expected place.")
+                return {"error": "Malformed result from documentation tool", "raw_mcp_response": mcp_response_dict}
+        else:
+            logger.error(f"Unexpected structure after parsing Gradio documentation tool string: {parsed_outer_list}")
+            return {"error": "Unexpected result structure from documentation tool", "raw_parsed_output": parsed_outer_list}
+
+    except json.JSONDecodeError as e:
+        logger.error(f"Failed to parse Gradio documentation tool string to JSON: {raw_json_string_output}. Error: {e}")
+        return {"error": "Failed to parse result from documentation tool", "raw_output": raw_json_string_output if 'raw_json_string_output' in locals() else 'N/A'}
+    except Exception as e:
+        logger.exception("Error calling Gradio documentation tool:")
+        return {"error": f"Exception during Gradio documentation tool call: {str(e)}"}
+
+# Create LlamaIndex FunctionTool
+gradio_pydocstyle_tool = FunctionTool.from_defaults(
+    fn=run_gradio_documentation_check,
+    name="gradio_documentation_scanner",
+    description="Runs a documentation style check (Pydocstyle) on the provided Python code using an external Gradio-based tool. Input is the code string. Returns JSON analysis results which include a list of 'errors' with details like 'code', 'message', and 'line'."
 )
 
 class DocAgent:
     def __init__(self):
         self.llm = get_llm()
-        # Tools specific to this agent
-        self.tools = [adapted_pydocstyle_mcp_tool]
+        self.tools = [gradio_pydocstyle_tool]
 
         self.agent_worker = ReActAgentWorker.from_tools(
             tools=self.tools,
             llm=self.llm,
-            verbose=True  # Enable verbose logging for the agent's thoughts
+            verbose=True
         )
         self.agent = AgentRunner(self.agent_worker, llm=self.llm, verbose=True)
         logger.info(f"DocAgent initialized with LLM: {self.llm.model if hasattr(self.llm, 'model') else type(self.llm).__name__} and Agent: {type(self.agent).__name__}")
         logger.info(f"DocAgent tools: {[tool.metadata.name for tool in self.tools]}")
 
-
     def analyze_documentation(self, query: str) -> OutputSchema:
         prompt = f"""
-        Analyzes the documentation of the provided code snippet using its LLM agent.
-        Analyze the documentation of the following Python code. 
+        Analyzes the documentation of the provided Python code snippet using its LLM agent and available tools.
         Focus on PEP 257 compliance and general docstring quality. 
-        Provide a summary of findings and detailed issues if any.
+        Use the 'gradio_documentation_scanner' tool to get Pydocstyle results and incorporate these findings into your analysis.
+        Provide a summary of findings and detailed issues if any. If the tool finds issues, prioritize them in your response.
         The output must only be in the following JSON format. Do not output anything other than this JSON object:
         {{
-            "issue": "Issues found in the code",
-            "reason": "Reason for the issue and reasons for tagging them as issues",
-            "fixed_code": "Fixed code",
-            "feedback": "Feedback for the code"
+            "issue": "Issues found in the code (summarize tool findings if any, otherwise LLM assessment)",
+            "reason": "Reason for the issue (explain tool findings if any, otherwise LLM reasoning)",
+            "fixed_code": "Fixed code (if applicable, otherwise original code)",
+            "feedback": "Feedback on the code quality and suggestions for improvement (can include LLM suggestions and tool details)"
         }}
-
-        --- CODE START ---
+        Code to analyze:
+        ```python
         {query}
-        --- CODE END ---
+        ```
         """
-        logger.info(f"DocAgent: Received query for documentation analysis:\n{query}")
-        
-        # Clear any previous global tool outputs before this agent runs its tools
-        # This is important if multiple agents use the same global list.
-        clear_tool_outputs() 
+        logger.info(f"DocAgent: Received query for documentation analysis:\n{query[:200]}...")
 
         try:
-            # The DocAgent's LLM will process the query and decide to use pydocstyle_mcp_tool
-            agent_response = self.agent.query(prompt).response
+            agent_response = self.agent.query(prompt)
+            llm_json_response = parse_thinking_outputs(agent_response.response)
             
-            llm_json_response = parse_thinking_outputs(agent_response)
-            logger.info(f"DocAgent: LLM JSON response: {llm_json_response}")
-
-            # Retrieve outputs from tools called by *this* agent during *this* query
-            tool_outputs_data = get_all_tool_outputs() 
-            
-            # We need to transform these raw tool outputs into OutputCodeLine if needed,
-            # or decide if the llm_text_response is sufficient.
-            # For now, let's assume the orchestrator will primarily look at DocAgent's LLM response
-            # and the structured tool_outputs_data.
-            # The OutputSchema for DocAgent might be simpler, focusing on its findings.
-
-            # Let's create a generic OutputCodeLine for the agent's summary
-            # and then add detailed findings from tools if available.
-            
-            final_output_schema: Optional[OutputSchema] = None
+            logger.info(f"DocAgent: LLM JSON response after agent query: {llm_json_response}")
 
             if llm_json_response:
                 final_output_schema = OutputSchema(
-                    code=query, # Or relevant snippet if identifiable
-                    issue=llm_json_response.get("issue", "Unknown Issue"),
-                    feedback=llm_json_response.get("feedback", "No feedback provided"),
+                    code=query, 
+                    issue=llm_json_response.get("issue", "No issue details provided by agent."),
+                    feedback=llm_json_response.get("feedback", "No feedback provided by agent."),
                     fixed_code=llm_json_response.get("fixed_code", query),
-                    reason=llm_json_response.get("reason", "Summary from Documentation Analysis Agent LLM.")
+                    reason=llm_json_response.get("reason", "No reason provided by agent.")
                 )
-
-            # Process tool outputs if any were generated by this agent's run
-            for tool_call_data in tool_outputs_data:
-                # Example: tool_call_data = {'tool_name': 'pydocstyle_mcp_tool', 'output': {...}, 'raw_input':{...}}
-                if tool_call_data.get("tool_name") == "pydocstyle_mcp_tool":
-                    pydocstyle_output = tool_call_data.get("output", {})
-                    pydocstyle_errors = pydocstyle_output.get("errors", [])
-                    for error in pydocstyle_errors:
-                        final_output_schema = OutputSchema(
-                            code=query, # Could try to get from raw_input if complex
-                            line_number=error.get("line", 0),
-                            issue=f"Pydocstyle-{error.get('code')}",
-                            feedback=error.get('message'),
-                            fixed_code=query,
-                            reason=f"Docstring convention violation ({error.get('code')})."
-                        )
-            
-            if not tool_outputs_data:
-                logger.info("DocAgent: No specific tool outputs captured by this agent's run.")
+            else:
+                logger.warning("DocAgent: Agent did not produce a parsable JSON response. Constructing a default error response.")
+                final_output_schema = OutputSchema(
+                    code=query,
+                    issue="Agent Response Error",
+                    feedback="Agent did not produce the expected JSON output. Raw response: " + str(agent_response.response),
+                    fixed_code=query,
+                    reason="Agent failed to format its output correctly after processing."
+                )
 
         except Exception as e:
             logger.exception("DocAgent: Error during documentation analysis agent execution:")
             final_output_schema = OutputSchema(
-                    code="", 
-                    issue="DocAgent Execution Error", 
-                    feedback=f"Error in DocAgent: {str(e)}",
-                    fixed_code="", 
-                    reason="Exception during agent processing."
-                )
+                code=query,
+                issue="Agent Execution Error",
+                feedback=f"An error occurred: {str(e)}",
+                fixed_code=query,
+                reason="The documentation analysis agent encountered an internal error."
+            )
         
-        # Clear outputs again to ensure they don't leak to the next agent/orchestrator phase
-        # if the orchestrator isn't managing this strictly.
-        # clear_tool_outputs() # Or the orchestrator handles this after collecting agent's response.
-        # For now, let DocAgent return its collected outputs. Orchestrator will manage global state.
-
-        logger.info(f"DocAgent: Analysis complete. Returning OutputSchema.")
         return final_output_schema
 
 logger.info("DocAgent (LLM-powered) module loaded.")
