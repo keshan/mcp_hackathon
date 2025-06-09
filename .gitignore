@@ -199,3 +199,5 @@ cython_debug/
 .widsurf/
 .widsurfignore
 .widsurfindexingignore
+
+.DS_Store

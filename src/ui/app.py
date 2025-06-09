@@ -10,11 +10,13 @@
 #     "httpx",
 #     "openinference-instrumentation-llama-index",
 #     "arize-phoenix",
+#     "gradio-codeanalysisviewer",
 # ]
 # ///
 
 import gradio as gr
 import json
+from gradio_codeanalysisviewer import CodeAnalysisViewer
 from loguru import logger
 
 # Core setup modules
@@ -80,10 +82,10 @@ def analyze_code_ui(code_str: str):
     security_agent_dict = pydantic_to_dict(security_agent_output)
 
     if final_results_dict is None: final_results_dict = {"info": "No combined output from orchestrator."}
-    if doc_agent_dict is None: doc_agent_dict = {"info": "No output from documentation agent."}
-    if security_agent_dict is None: security_agent_dict = {"info": "No output from security agent."}
+    # if doc_agent_dict is None: doc_agent_dict = {"info": "No output from documentation agent."}
+    # if security_agent_dict is None: security_agent_dict = {"info": "No output from security agent."}
     
-    return final_results_dict, doc_agent_dict, security_agent_dict
+    return final_results_dict
 
 # Create the Gradio interface
 iface = gr.Interface(
@@ -94,15 +96,12 @@ iface = gr.Interface(
         placeholder="Paste your Python code here..."
     ),
     outputs=[
-        gr.JSON(label="Overall Analysis (Final Output)"),
-        gr.JSON(label="Documentation Agent Output"),
-        gr.JSON(label="Security Agent Output")
+        CodeAnalysisViewer(label="Overall Code Analysis")
     ],
     title="Agentic Code Analyzer",
     description=(
         "Enter Python code to be analyzed by a multi-agent system. "
-        "The system will assess documentation, identify potential security issues, and provide combined insights. "
-        "Results from each stage are displayed in JSON format."
+        "The system will perform a comprehensive analysis of your Python code, covering documentation, security, and other aspects, providing combined insights."
     ),
     allow_flagging="never",
     examples=[

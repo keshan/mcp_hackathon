@@ -18,6 +18,7 @@ dependencies = [
     "asyncio>=3.4.3",
     "gradio[mcp]>=5.33.0",
     "gradio-client>=1.10.2",
+    "gradio-codeanalysisviewer>=0.0.1",
 ]
 
 [project.optional-dependencies]
