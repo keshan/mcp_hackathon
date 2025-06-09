@@ -61,7 +61,7 @@ Given the following Python code:
 1. Assess the code and determine the required analysis depth: 'minimum', 'standard', or 'deep'.
 2. Based on the depth and code content, decide which specialized analysis agents to invoke: 'DocAgent' for documentation, 'SecurityAgent' for security. You can choose one, both, or none if the code is trivial.
 3. Respond ONLY with a JSON object containing your assessment. Do not add any other text before or after the JSON.
-   Example JSON:
+   Example JSON schema of the pydantic model:
    {OrchestratorDecision.model_json_schema()}
 """
         logger.info("Orchestrator: Performing initial assessment with its own LLM agent...")
@@ -98,16 +98,14 @@ Given the following Python code:
 
         doc_agent_output: Optional[OutputSchema] = None
         if invoke_doc_agent:
-            doc_agent_query = f"Analyze the documentation of the following Python code. Focus on PEP 257 compliance and general docstring quality. Provide a summary of findings and detailed issues if any.\n\n--- CODE START ---\n{code_string}\n--- CODE END ---"
             logger.info("Orchestrator: Invoking DocAgent...")
-            doc_agent_output = self.doc_agent.analyze_documentation(doc_agent_query)
+            doc_agent_output = self.doc_agent.analyze_documentation(code_string)
             logger.info("Orchestrator: DocAgent finished.")
 
         security_agent_output: Optional[OutputSchema] = None
         if invoke_security_agent:
-            security_agent_query = f"Analyze the security of the following Python code for common vulnerabilities using Bandit. Provide a summary of findings and detailed issues if any.\n\n--- CODE START ---\n{code_string}\n--- CODE END ---"
             logger.info("Orchestrator: Invoking SecurityAgent...")
-            security_agent_output = self.security_agent.analyze_security(security_agent_query)
+            security_agent_output = self.security_agent.analyze_security(code_string)
             logger.info("Orchestrator: SecurityAgent finished.")
 
         doc_findings_str = doc_agent_output.model_dump_json() if doc_agent_output else ""

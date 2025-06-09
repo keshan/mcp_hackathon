@@ -31,8 +31,9 @@ class SecurityAgent:
     def analyze_security(self, query: str) -> OutputSchema:
         prompt = f"""
         Analyzes the security of the provided code snippet using its LLM agent.
-        The query should contain the code and instructions for analysis. You can use the
-        tools at your disposal and use that results also for your assessment. 
+        Analyze the security of the following Python code for common vulnerabilities. 
+        You can use the tools at your disposal and use that results also for your assessment. 
+        Provide a summary of findings and detailed issues if any. 
         The output must only be in the following JSON format. strictly adhere to this format. 
         Do not output anything other than this JSON object:
         {{
@@ -42,8 +43,9 @@ class SecurityAgent:
             "feedback": "Feedback for the code"
         }}
 
-        Here's the query:
+        --- CODE START ---
         {query}
+        --- CODE END ---
         """
         logger.info(f"SecurityAgent: Received query for security analysis:\n{query}")
         

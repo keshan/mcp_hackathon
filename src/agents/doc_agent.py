@@ -33,9 +33,10 @@ class DocAgent:
     def analyze_documentation(self, query: str) -> OutputSchema:
         prompt = f"""
         Analyzes the documentation of the provided code snippet using its LLM agent.
-        The query should contain the code and instructions for analysis. You can use the
-        tools at your disposal and use that results also for your assessment. The output must only be
-        in the following JSON format. Do not output anything other than this JSON object:
+        Analyze the documentation of the following Python code. 
+        Focus on PEP 257 compliance and general docstring quality. 
+        Provide a summary of findings and detailed issues if any.
+        The output must only be in the following JSON format. Do not output anything other than this JSON object:
         {{
             "issue": "Issues found in the code",
             "reason": "Reason for the issue and reasons for tagging them as issues",
@@ -43,8 +44,9 @@ class DocAgent:
             "feedback": "Feedback for the code"
         }}
 
-        Here's the query:
+        --- CODE START ---
         {query}
+        --- CODE END ---
         """
         logger.info(f"DocAgent: Received query for documentation analysis:\n{query}")
         

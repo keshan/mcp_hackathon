@@ -107,7 +107,7 @@ iface = gr.Interface(
     allow_flagging="never",
     examples=[
         [
-            "import os\n\ndef my_function_without_docstring():\n    # This function lacks a docstring.\n    print(\"Hello, world!\")\n    password = os.getenv(\"MY_PASSWORD\") # Potential security issue\n    return password\n\ndef another_function_with_docstring():\n    \"\"\"This is a good docstring.\"\"\"\n    pass"
+            "import os\n\ndef my_function_without_docstring():\n    print(\"Hello, world!\")\n    password = os.getenv(\"MY_PASSWORD\")\n    return password\n\ndef another_function_with_docstring():\n    \"\"\"This is a good docstring.\"\"\"\n    pass"
         ]
     ]
 )
