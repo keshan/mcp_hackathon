@@ -16,9 +16,10 @@ dependencies = [
     "llama-index-program-lmformatenforcer>=0.3.0",
     "openinference-instrumentation-llama_index",
     "asyncio>=3.4.3",
-    "gradio[mcp]>=5.33.0",
-    "gradio-client>=1.10.2",
-    "gradio-codeanalysisviewer>=0.0.1",
+    "gradio>=5.33.1",
+    "gradio[mcp]",
+    "gradio-client",
+    "gradio-codeanalysisviewer>=0.0.2",
 ]
 
 [project.optional-dependencies]
