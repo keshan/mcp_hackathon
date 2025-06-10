@@ -15,75 +15,66 @@
 # ///
 
 import gradio as gr
-import json
+import asyncio
 from gradio_codeanalysisviewer import CodeAnalysisViewer
 from loguru import logger
+
 
 # Core setup modules
 from src.core.observability import setup_observability
 from src.core.schemas import CodeInputSchema
 
-# Import the orchestrator
-from src.agents.orchestrator_agent import CodeAnalysisOrchestrator
+# Import the workflow
+from src.workflows.code_analysis_workflow import CodeAnalysisWorkflow, WorkflowCompleteOutput
 
-# Initialize orchestrator once
-# Ensure environment variables are loaded for orchestrator initialization if needed
-# setup_observability() will handle dotenv loading
-_orchestrator_instance = None
+# Initialize workflow once
+_workflow_instance = None
 
-def get_orchestrator():
-    global _orchestrator_instance
-    if _orchestrator_instance is None:
-        logger.info("UI: Initializing CodeAnalysisOrchestrator for the first time...")
-        _orchestrator_instance = CodeAnalysisOrchestrator()
-    return _orchestrator_instance
+def get_workflow():
+    global _workflow_instance
+    if _workflow_instance is None:
+        logger.info("UI: Initializing CodeAnalysisWorkflow for the first time...")
+        _workflow_instance = CodeAnalysisWorkflow(timeout=120)
+    return _workflow_instance
 
 def pydantic_to_dict(model_instance):
     """Helper function to convert a Pydantic model instance to a dictionary."""
     if not model_instance:
         return None
     try:
-        # Pydantic v2+
         return model_instance.model_dump(mode='json')
-    except AttributeError:
-        try:
-            # Pydantic v1
-            return model_instance.dict()
-        except AttributeError:
-            logger.error(f"Failed to serialize: Input is not a Pydantic model or is None. Type: {type(model_instance)}")
-            return {"error": "Output is not a Pydantic model or is None."}
     except Exception as e:
         logger.error(f"Error serializing Pydantic model: {e}")
         return {"error": f"Failed to serialize output: {str(e)}"}
 
-def analyze_code_ui(code_str: str):
-    """Analyzes the input code string using the orchestrator and returns results."""
+async def analyze_code_ui(code_str: str):
+    """Analyzes the input code string using the workflow and returns results."""
     if not code_str or not code_str.strip():
         logger.warning("UI: No code provided for analysis.")
-        empty_result = {"info": "No code provided."}
-        return empty_result, empty_result, empty_result
+        return {"info": "No code provided."}
 
-    orchestrator = get_orchestrator()
+    workflow = get_workflow()
     code_input = CodeInputSchema(code=code_str)
     
-    logger.info(f"UI: Sending CodeInputSchema to orchestrator. Code (first 100 chars): {code_str[:100].replace('\n', ' ')}...")
+    logger.info(f"UI: Sending code to workflow. Code (first 100 chars): {code_str[:100].replace('\n', ' ')}...")
     
     try:
-        final_outputs, doc_agent_output, security_agent_output = orchestrator.analyze_code(code_input)
+        # Run the async workflow, passing the input data as keyword arguments
+        result: WorkflowCompleteOutput = await workflow.run(code_input=code_input)
+        
+        # Extract the final aggregated output
+        final_outputs = result.final_aggregated_output
+        
     except Exception as e:
-        logger.error(f"UI: Error during orchestrator.analyze_code: {e}", exc_info=True)
-        error_result = {"error": f"Analysis failed: {str(e)}"}
-        return error_result, error_result, error_result
+        logger.error(f"UI: Error during workflow execution: {e}", exc_info=True)
+        return {"error": f"Analysis failed: {str(e)}"}
 
-    logger.info("UI: Orchestrator analysis complete. Serializing outputs...")
+    logger.info("UI: Workflow analysis complete. Serializing outputs...")
 
     final_results_dict = pydantic_to_dict(final_outputs)
-    doc_agent_dict = pydantic_to_dict(doc_agent_output)
-    security_agent_dict = pydantic_to_dict(security_agent_output)
 
-    if final_results_dict is None: final_results_dict = {"info": "No combined output from orchestrator."}
-    # if doc_agent_dict is None: doc_agent_dict = {"info": "No output from documentation agent."}
-    # if security_agent_dict is None: security_agent_dict = {"info": "No output from security agent."}
+    if final_results_dict is None:
+        final_results_dict = {"info": "No combined output from workflow."}
     
     return final_results_dict
 
@@ -113,11 +104,9 @@ iface = gr.Interface(
 
 if __name__ == "__main__":
     # Setup observability (includes load_dotenv())
-    # This should be called once when the application/script starts.
     setup_observability()
     
     logger.info("UI: Launching Gradio interface...")
-    # The get_orchestrator() call here pre-initializes it if not already done,
-    # ensuring any startup messages from it appear before Gradio's server messages.
-    get_orchestrator() 
-    iface.launch() # Add share=True if you want a public link: iface.launch(share=True)
+    # Pre-initialize the workflow to show any startup messages
+    get_workflow()
+    iface.launch(server_name="0.0.0.0")

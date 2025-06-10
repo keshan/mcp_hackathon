@@ -38,7 +38,9 @@ packages = [
     "src/agents",
     "src/core",
     "src/mcp_server",
-    "src/orchestrator"
+    "src/orchestrator",
+    "src/ui",
+    "src/workflows"
 ]
 
 [build-system]

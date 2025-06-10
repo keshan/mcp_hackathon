@@ -13,24 +13,26 @@
 # ///
 # src/orchestrator/main.py
 
+import asyncio
 import json
+import uuid
 from loguru import logger
 
 # Core setup modules
 from src.core.observability import setup_observability
-from src.core.schemas import CodeInputSchema # MODIFIED: Import necessary schemas
+from src.core.schemas import CodeInputSchema
 
-# Import the orchestrator
-from src.agents.orchestrator_agent import CodeAnalysisOrchestrator
+# Import the new workflow
+from src.workflows.code_analysis_workflow import CodeAnalysisWorkflow, WorkflowCompleteOutput
 
 # Setup observability (includes load_dotenv())
 # This should be called once when the application/script starts.
 setup_observability()
 
-if __name__ == "__main__":
-    logger.info("MAIN: Initializing CodeAnalysisOrchestrator...")
-    orchestrator = CodeAnalysisOrchestrator()
-    
+async def main():
+    logger.info("MAIN: Initializing CodeAnalysisWorkflow...")
+    workflow = CodeAnalysisWorkflow(verbose=True, timeout=180)
+
     sample_code_to_analyze_str = (
         "import os\n\n"
         "def my_function_without_docstring():\n"
@@ -43,31 +45,33 @@ if __name__ == "__main__":
         "    pass"
     )
 
-    # Convert the string to CodeInputSchema
     code_input = CodeInputSchema(code=sample_code_to_analyze_str)
     
-    logger.info(f"MAIN: Sending CodeInputSchema to orchestrator. Code (first 100 chars): {sample_code_to_analyze_str[:100]}...")
-    final_outputs, doc_agent_output, security_agent_output = orchestrator.analyze_code(code_input) 
-    
-    logger.info("MAIN: Orchestrator analysis results (OutputSchema):")
-    
-    results_dict = {}
-    if final_outputs:
-        try:
-            results_dict = final_outputs.model_dump(mode='json') # Pydantic v2+
-        except AttributeError:
-            try:
-                results_dict = final_outputs.dict() # Pydantic v1
-            except AttributeError:
-                logger.error("MAIN: Could not convert final_outputs to dict. It might not be a Pydantic model or is None.")
-                results_dict = {"error": "Failed to serialize output schema."}
-        except Exception as e:
-            logger.error(f"MAIN: Error serializing OutputSchema: {e}")
-            results_dict = {"error": f"Failed to serialize output schema: {str(e)}"}
-    else:
-        logger.warning("MAIN: final_outputs is None.")
-        results_dict = {"warning": "Orchestrator returned None."}
+    request_id = f"local_run_{uuid.uuid4()}"
+    logger.info(f"MAIN: [{request_id}] Starting workflow for code (first 100 chars): {sample_code_to_analyze_str[:100]}...")
+    result: WorkflowCompleteOutput = await workflow.run(code_input=code_input, request_id=request_id)
+
+    if result:
+        logger.info(f"--- Workflow Result for Request ID: {result.request_id} ---")
         
-    logger.info(json.dumps(results_dict, indent=4))
+        logger.info("--- Final Aggregated Output ---")
+        logger.info(result.final_aggregated_output.model_dump_json(indent=2))
+
+        if result.doc_agent_output:
+            logger.info("--- Doc Agent Output ---")
+            logger.info(result.doc_agent_output.model_dump_json(indent=2))
+        else:
+            logger.info("--- Doc Agent Output: Not run or no findings ---")
+
+        if result.security_agent_output:
+            logger.info("--- Security Agent Output ---")
+            logger.info(result.security_agent_output.model_dump_json(indent=2))
+        else:
+            logger.info("--- Security Agent Output: Not run or no findings ---")
+    else:
+        logger.error("MAIN: Workflow did not return a result.")
 
     logger.info("MAIN: Script finished.")
+
+if __name__ == "__main__":
+    asyncio.run(main())

@@ -200,6 +200,24 @@
         *   Orchestrator's LLM-based aggregation of sub-agent findings.
         *   Correct construction and output of the final `OutputSchema` in JSON format.
 
+
+## 2025-06-10
+
+### Task: Create Dockerfile for Application Deployment
+
+*   **Status**: Done
+*   **Details**:
+    *   Created a `Dockerfile` in the project root (`/Users/keshan/Documents/mcp_hackathon/Dockerfile`).
+    *   The Dockerfile uses `python:3.12-slim` as the base image.
+    *   It installs `git` and `uv` (the project's package manager).
+    *   Clones the source code from `https://github.com/keshan/mcp_hackathon.git`.
+    *   Installs Python dependencies using `uv sync`.
+    *   Exposes port `7860` for the Gradio application.
+    *   Sets the `CMD` to run `src/ui/app.py` via `uv run --host 0.0.0.0 --port 7860`.
+*   **Files Modified**:
+    *   `/Users/keshan/Documents/mcp_hackathon/Dockerfile` (created)
+
+
 **Outcome**: The multi-agent architecture is now robust against the previously encountered schema validation and type errors. The `main.py` script demonstrates a successful end-to-end analysis pipeline, with agents communicating via defined Pydantic schemas and the orchestrator correctly coordinating the workflow and synthesizing results.
 
 ## Task: Create Gradio UI for MCP Tool Interaction (via Modal)
