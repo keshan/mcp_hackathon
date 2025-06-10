@@ -32,7 +32,7 @@ def get_workflow():
     global _workflow_instance
     if _workflow_instance is None:
         logger.info("UI: Initializing CodeAnalysisWorkflow for the first time...")
-        _workflow_instance = CodeAnalysisWorkflow(timeout=120)
+        _workflow_instance = CodeAnalysisWorkflow(timeout=600)
     return _workflow_instance
 
 def pydantic_to_dict(model_instance):
@@ -153,7 +153,8 @@ with gr.Blocks(theme=gr.themes.Soft()) as iface:
     )
 
 if __name__ == "__main__":
-    setup_observability()
+    # Temporarily disabled for HF Space.
+    #setup_observability()
     logger.info("UI: Launching Gradio interface...")
     get_workflow()
     # Use queue() to handle multiple users and prevent timeouts on the UI side

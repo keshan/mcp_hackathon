@@ -27,7 +27,8 @@ from src.workflows.code_analysis_workflow import CodeAnalysisWorkflow, WorkflowC
 
 # Setup observability (includes load_dotenv())
 # This should be called once when the application/script starts.
-setup_observability()
+# Temporarily disabled for HF Space.
+# setup_observability()
 
 async def main():
     logger.info("MAIN: Initializing CodeAnalysisWorkflow...")

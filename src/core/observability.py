@@ -19,7 +19,7 @@ def setup_observability():
 
     logger.info(f"Attempting to initialize Arize Phoenix with OpenInference. Endpoint: {phoenix_endpoint}")
     try:
-        tracer_provider = register()
+        tracer_provider = register(set_global_tracer_provider=False)
         LlamaIndexInstrumentor().instrument(tracer_provider=tracer_provider)
         logger.info("Arize Phoenix instrumentor initialized with LlamaIndex.")
         logger.info(f"Ensure Phoenix is running at {phoenix_endpoint} to view traces.")
